@@ -51,7 +51,7 @@
             <div class="val idle" id="countIdle">0</div>
         </div>
         <div class="state-box">
-            <h4>Agents Busy (Occupé)</h4>
+            <h4>Agents Busy + Wrap Up</h4>
             <div class="val busy" id="countBusy">0</div>
         </div>
     </div>
@@ -77,7 +77,7 @@
             return;
         }
 
-        // On sépare le texte en lignes
+        // On sépare le texte par ligne. 
         const lignes = texte.split('\n');
         
         let stats = {
@@ -90,36 +90,44 @@
         let idle = 0;
         let busy = 0;
 
-        lignes.forEach(ligne => {
-            if (ligne.trim() === '') return;
+        // --- NOUVELLE LOGIQUE DE REGROUPEMENT ---
+        // On va créer des "blocs" d'agents pour éviter que le copier-coller ne casse l'analyse
+        let blocActuel = "";
 
-            // --- GESTION DES STATUTS (IDLE / BUSY) ---
-            // On vérifie si le mot exact "Idle" ou "Busy" est présent dans la ligne
-            // (sans tenir compte des majuscules/minuscules)
+        for (let i = 0; i < lignes.length; i++) {
+            let ligne = lignes[i].trim();
+            if (ligne === "") continue;
+
+            // On ajoute la ligne au bloc actuel
+            blocActuel += " " + ligne;
+
+            // On vérifie si cette ligne (ou le bloc) contient un statut
             const estIdle = /\bIdle\b/i.test(ligne);
-            const estBusy = /\bBusy\b/i.test(ligne);
+            const estBusy = /\bBusy\b/i.test(ligne) || /\bWrap\s*Up\b/i.test(ligne); // Busy OR Wrap Up
 
-            if (estIdle) idle++;
-            if (estBusy) busy++;
+            // Si on détecte un statut, on analyse tout le bloc accumulé pour cet agent
+            if (estIdle || estBusy) {
+                if (estIdle) idle++;
+                if (estBusy) busy++;
 
-            // --- COMPTAGE DES SKILLS (Uniquement si l'agent est Idle ou Busy) ---
-            // Si l'agent n'est ni Idle ni Busy (ex: Déconnexion), on passe à la ligne suivante
-            if (!estIdle && !estBusy) return; 
+                // On vérifie les skills sur TOUT le bloc (nom + skills + statut)
+                for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
+                    const aLaSkill = motsCles.some(mot => {
+                        const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
+                        return regex.test(blocActuel);
+                    });
+                    if (aLaSkill) stats[categorie]++;
+                }
 
-            for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
-                const aLaSkill = motsCles.some(mot => {
-                    const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
-                    return regex.test(ligne);
-                });
-                
-                if (aLaSkill) stats[categorie]++;
+                // On vérifie MAIL sur tout le bloc
+                if (/C\s*Case/i.test(blocActuel)) {
+                    stats['MAIL (C Case)']++;
+                }
+
+                // On réinitialise le bloc pour passer à l'agent suivant
+                blocActuel = "";
             }
-
-            // --- COMPTAGE MAIL ---
-            if (/C\s*Case/i.test(ligne)) {
-                stats['MAIL (C Case)']++;
-            }
-        });
+        }
 
         // Affichage Idle / Busy
         document.getElementById('statesContainer').style.display = 'flex';
