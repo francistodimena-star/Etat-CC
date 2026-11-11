@@ -63,13 +63,11 @@
 </div>
 
 <script>
-    // Définition des règles métier basées sur tes spécifications
     const REGLES_SKILLS = {
         'HYPER': ['A2PAS', 'AUCHANGO', 'FNR', 'HYPER', 'MYAUCHAN', 'QUALITE', 'SUPER', 'THYPER', 'TSUPER', 'UPROXY'],
         'AFR': ['AFR', 'TAUCHANFR'],
         'DRIVE': ['DRIVE', 'TDRIVE'],
         'SAV': ['RED SAV', 'SAV', 'SAVED', 'TSAV']
-        // MAIL sera traité à part
     };
 
     function analyserDonnees() {
@@ -79,10 +77,8 @@
             return;
         }
 
-        // On sépare le texte en lignes (chaque ligne = 1 agent)
         const lignes = texte.split('\n');
         
-        // Initialisation des compteurs
         let stats = {
             'HYPER': 0,
             'AFR': 0,
@@ -94,18 +90,29 @@
         let busy = 0;
 
         lignes.forEach(ligne => {
-            if (ligne.trim() === '') return; // Ignorer les lignes vides
+            if (ligne.trim() === '') return;
 
-            // 1. Comptage des états (Idle / Busy)
-            if (ligne.includes('Idle')) idle++;
-            if (ligne.includes('Busy')) busy++;
+            // --- GESTION STRICTE DES STATUTS (IDLE / BUSY) ---
+            // On découpe la ligne avec les tabulations pour isoler les colonnes
+            const colonnes = ligne.split('\t');
+            
+            // Sur ton tableau, la 2ème colonne (index 1) correspond à "Agent state".
+            if (colonnes.length > 1) {
+                // On nettoie le texte (enlève les espaces vides autour)
+                const agentState = colonnes[1].trim();
+                
+                // On vérifie STRICTEMENT si c'est "Idle" ou "Busy"
+                if (agentState === 'Idle') {
+                    idle++;
+                } else if (agentState === 'Busy') {
+                    busy++;
+                }
+                // Tout le reste (Déconnexion, etc.) est ignoré
+            }
 
-            // 2. Comptage des Skills classiques
-            // On parcourt chaque catégorie (HYPER, AFR, etc.)
+            // --- COMPTAGE DES SKILLS ---
             for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
-                // On vérifie si la ligne contient AU MOINS UN des mots-clés de la catégorie
                 const aLaSkill = motsCles.some(mot => {
-                    // Regex: \b pour délimiter le mot (évite de compter "SUPER" dans "SUPERVISEUR")
                     const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
                     return regex.test(ligne);
                 });
@@ -113,15 +120,12 @@
                 if (aLaSkill) stats[categorie]++;
             }
 
-            // 3. Comptage spécial pour MAIL ("C Case")
-            // On cherche la phrase exacte "C Case" sans tenir compte de la casse
+            // --- COMPTAGE MAIL ---
             if (/C\s*Case/i.test(ligne)) {
                 stats['MAIL (C Case)']++;
             }
         });
 
-        // --- AFFICHAGE DES RÉSULTATS ---
-        
         // Affichage Idle / Busy
         document.getElementById('statesContainer').style.display = 'flex';
         document.getElementById('countIdle').innerText = idle;
@@ -129,12 +133,11 @@
 
         // Affichage des Skills
         const dashboard = document.getElementById('dashboardContainer');
-        dashboard.innerHTML = ''; // Nettoyer
+        dashboard.innerHTML = ''; 
         dashboard.style.display = 'grid';
 
         for (const [titre, count] of Object.entries(stats)) {
             const card = document.createElement('div');
-            // On ajoute une classe spéciale pour la carte Mail pour la différencier
             card.className = titre.includes('MAIL') ? 'card mail' : 'card';
             
             card.innerHTML = `
