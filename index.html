@@ -44,7 +44,6 @@
         <button class="reset" onclick="resetData()">Effacer</button>
     </div>
 
-    <!-- Section Etats (Uniquement Idle et Busy) -->
     <div class="states" id="statesContainer" style="display:none;">
         <div class="state-box">
             <h4>Agents Idle (Prêt)</h4>
@@ -76,37 +75,25 @@
 
         const agents = texte.split(/WEB_/i);
         
-        let stats = {
-            'HYPER': 0,
-            'AFR': 0,
-            'DRIVE': 0,
-            'SAV': 0,
-            'MAIL (C Case)': 0
-        };
+        let stats = { 'HYPER': 0, 'AFR': 0, 'DRIVE': 0, 'SAV': 0, 'MAIL (C Case)': 0 };
         let idle = 0;
         let busy = 0;
 
         for (let i = 1; i < agents.length; i++) {
             let blocAgent = agents[i];
 
-            // --- NOUVEAU FILTRE : ON IGNORE LA COLONNE "GROUPS" ---
-            // On découpe le bloc en lignes, et on ignore toutes celles qui commencent par "C " (sauf "C Case")
-            let lignesAgent = blocAgent.split('\n');
-            let texteSansGroupes = lignesAgent.filter(ligne => {
-                let ligneNettoyee = ligne.trim();
-                // Si la ligne commence par "C " mais n'est pas "C Case", on la supprime
-                if (/^C\s+/i.test(ligneNettoyee) && !/^C\s*Case/i.test(ligneNettoyee)) {
-                    return false; 
-                }
-                return true;
-            }).join(' '); // On recolle les lignes restantes
+            // 1. NETTOYAGE : On supprime les groupes "C ..." sauf "C Case"
+            // On remplace tout ce qui commence par C suivi d'un espace (sauf Case) jusqu'à la fin de la ligne
+            let texteNettoye = blocAgent.replace(/C\s+(?!Case)[^\n]*/gi, '');
+            
+            // On remplace les sauts de ligne par des espaces pour que tout soit sur une seule ligne
+            texteNettoye = texteNettoye.replace(/\n/g, ' ');
 
-            // 1. Vérification du statut (sur le texte nettoyé)
-            const estIdle = /\bIdle\b/i.test(texteSansGroupes);
-            const estBusy = /\bBusy\b/i.test(texteSansGroupes);
-            const estWrapUp = /\bWrap\s*Up\b/i.test(texteSansGroupes) || /\bWrapUp\b/i.test(texteSansGroupes);
+            // 2. Vérification du statut
+            const estIdle = /\bIdle\b/i.test(texteNettoye);
+            const estBusy = /\bBusy\b/i.test(texteNettoye);
+            const estWrapUp = /\bWrap\s*Up\b/i.test(texteNettoye) || /\bWrapUp\b/i.test(texteNettoye);
 
-            // 2. RÈGLE STRICTE : Si ce n'est ni Idle, ni Busy, ni Wrap Up, on ignore
             if (!estIdle && !estBusy && !estWrapUp) {
                 continue; 
             }
@@ -114,15 +101,15 @@
             if (estIdle) idle++;
             if (estBusy || estWrapUp) busy++;
 
-            // 3. On compte les Skills (uniquement sur le texte sans les groupes)
+            // 3. On compte les Skills
             for (const [categorie, regex] of Object.entries(REGLES_SKILLS)) {
-                if (regex.test(texteSansGroupes)) {
+                if (regex.test(texteNettoye)) {
                     stats[categorie]++;
                 }
             }
 
-            // 4. On compte le MAIL (C Case) (qui a été conservé dans texteSansGroupes)
-            if (/\bC\s*Case\b/i.test(texteSansGroupes)) {
+            // 4. On compte le MAIL (C Case)
+            if (/\bC\s*Case\b/i.test(texteNettoye)) {
                 stats['MAIL (C Case)']++;
             }
         }
