@@ -28,6 +28,7 @@
         .state-box .val { font-size: 24px; font-weight: bold; }
         .val.idle { color: #28a745; }
         .val.busy { color: #dc3545; }
+        .val.other { color: #ffc107; }
     </style>
 </head>
 <body>
@@ -44,6 +45,7 @@
         <button class="reset" onclick="resetData()">Effacer</button>
     </div>
 
+    <!-- Section Etats -->
     <div class="states" id="statesContainer" style="display:none;">
         <div class="state-box">
             <h4>Agents Idle (Prêt)</h4>
@@ -52,6 +54,10 @@
         <div class="state-box">
             <h4>Agents Busy + Wrap Up</h4>
             <div class="val busy" id="countBusy">0</div>
+        </div>
+        <div class="state-box">
+            <h4>Autres statuts (Pause, Brief...)</h4>
+            <div class="val other" id="countOther">0</div>
         </div>
     </div>
 
@@ -73,8 +79,6 @@
             return;
         }
 
-        // LA MAGIE EST ICI : On découpe le texte à chaque fois qu'on rencontre "WEB_"
-        // Cela permet d'isoler les données de chaque agent, même si le texte est tout cassé.
         const agents = texte.split(/WEB_/i);
         
         let stats = {
@@ -86,27 +90,32 @@
         };
         let idle = 0;
         let busy = 0;
+        let other = 0; // Nouveau compteur
 
-        // On ignore le premier élément (c'est l'en-tête du tableau avant le premier agent)
         for (let i = 1; i < agents.length; i++) {
             let blocAgent = agents[i];
 
-            // 1. Vérification du statut de l'agent
+            // Vérification des statuts
             const estIdle = /\bIdle\b/i.test(blocAgent);
             const estBusy = /\bBusy\b/i.test(blocAgent);
             const estWrapUp = /\bWrap\s*Up\b/i.test(blocAgent) || /\bWrapUp\b/i.test(blocAgent);
 
-            if (estIdle) idle++;
-            if (estBusy || estWrapUp) busy++;
+            if (estIdle) {
+                idle++;
+            } else if (estBusy || estWrapUp) {
+                busy++;
+            } else {
+                // Si ce n'est ni Idle, ni Busy, ni WrapUp, c'est un "Autre statut"
+                other++;
+            }
 
-            // 2. Vérification des Skills
+            // Vérification des Skills (pour tout le monde)
             for (const [categorie, regex] of Object.entries(REGLES_SKILLS)) {
                 if (regex.test(blocAgent)) {
                     stats[categorie]++;
                 }
             }
 
-            // 3. Vérification MAIL
             if (/\bC\s*Case\b/i.test(blocAgent)) {
                 stats['MAIL (C Case)']++;
             }
@@ -116,6 +125,7 @@
         document.getElementById('statesContainer').style.display = 'flex';
         document.getElementById('countIdle').innerText = idle;
         document.getElementById('countBusy').innerText = busy;
+        document.getElementById('countOther').innerText = other;
 
         const dashboard = document.getElementById('dashboardContainer');
         dashboard.innerHTML = ''; 
