@@ -44,7 +44,6 @@
         <button class="reset" onclick="resetData()">Effacer</button>
     </div>
 
-    <!-- Section Etats -->
     <div class="states" id="statesContainer" style="display:none;">
         <div class="state-box">
             <h4>Agents Idle (Prêt)</h4>
@@ -56,18 +55,13 @@
         </div>
     </div>
 
-    <!-- Section Skills -->
-    <div class="dashboard" id="dashboardContainer" style="display:none;">
-        <!-- Généré par JS -->
-    </div>
+    <div class="dashboard" id="dashboardContainer" style="display:none;"></div>
 </div>
 
 <script>
-    // Règles strictes avec gestion des espaces et exclusions
     const REGLES_SKILLS = {
         'HYPER': /\b(A2PAS|AUCHAN\s*GO|FNR|HYPER|MYAUCHAN|QUALITE|SUPER|THYPER|TSUPER|UPROXY)\b/i,
         'AFR': /\b(AFR|TAUCHAN\s*FR)\b/i,
-        // Pour DRIVE, on exclut "Auchan Drive" en utilisant une regex négative
         'DRIVE': /(?<!Auchan\s)\b(DRIVE|TDRIVE)\b/i,
         'SAV': /\b(RED\s*SAV|SAV|SAVED|TSAV)\b/i
     };
@@ -79,7 +73,9 @@
             return;
         }
 
-        const lignes = texte.split('\n');
+        // LA MAGIE EST ICI : On découpe le texte à chaque fois qu'on rencontre "WEB_"
+        // Cela permet d'isoler les données de chaque agent, même si le texte est tout cassé.
+        const agents = texte.split(/WEB_/i);
         
         let stats = {
             'HYPER': 0,
@@ -91,36 +87,36 @@
         let idle = 0;
         let busy = 0;
 
-        lignes.forEach(ligne => {
-            if (ligne.trim() === '') return;
+        // On ignore le premier élément (c'est l'en-tête du tableau avant le premier agent)
+        for (let i = 1; i < agents.length; i++) {
+            let blocAgent = agents[i];
 
-            // 1. Gestion des statuts
-            const estIdle = /\bIdle\b/i.test(ligne);
-            const estBusy = /\bBusy\b/i.test(ligne);
-            const estWrapUp = /\bWrap\s*Up\b/i.test(ligne) || /\bWrapUp\b/i.test(ligne);
+            // 1. Vérification du statut de l'agent
+            const estIdle = /\bIdle\b/i.test(blocAgent);
+            const estBusy = /\bBusy\b/i.test(blocAgent);
+            const estWrapUp = /\bWrap\s*Up\b/i.test(blocAgent) || /\bWrapUp\b/i.test(blocAgent);
 
             if (estIdle) idle++;
             if (estBusy || estWrapUp) busy++;
 
-            // 2. Gestion des skills avec les nouvelles Regex strictes
+            // 2. Vérification des Skills
             for (const [categorie, regex] of Object.entries(REGLES_SKILLS)) {
-                if (regex.test(ligne)) {
+                if (regex.test(blocAgent)) {
                     stats[categorie]++;
                 }
             }
 
-            // 3. Gestion du MAIL (C Case)
-            if (/\bC\s*Case\b/i.test(ligne)) {
+            // 3. Vérification MAIL
+            if (/\bC\s*Case\b/i.test(blocAgent)) {
                 stats['MAIL (C Case)']++;
             }
-        });
+        }
 
-        // Affichage Idle / Busy
+        // Affichage
         document.getElementById('statesContainer').style.display = 'flex';
         document.getElementById('countIdle').innerText = idle;
         document.getElementById('countBusy').innerText = busy;
 
-        // Affichage des Skills
         const dashboard = document.getElementById('dashboardContainer');
         dashboard.innerHTML = ''; 
         dashboard.style.display = 'grid';
@@ -128,11 +124,7 @@
         for (const [titre, count] of Object.entries(stats)) {
             const card = document.createElement('div');
             card.className = titre.includes('MAIL') ? 'card mail' : 'card';
-            
-            card.innerHTML = `
-                <h3>${titre}</h3>
-                <div class="value">${count}</div>
-            `;
+            card.innerHTML = `<h3>${titre}</h3><div class="value">${count}</div>`;
             dashboard.appendChild(card);
         }
     }
