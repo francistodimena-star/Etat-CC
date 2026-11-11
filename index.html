@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tableau de Bord - Pilotage Équipe</title>
+    
+    <!-- NOUVEAU : L'icône de l'onglet (un petit graphique bleu) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232563eb'><path d='M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z'/></svg>">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -216,7 +220,6 @@
 </div>
 
 <script>
-    // AJOUT DE BARCELONE ICI
     const REGLES_SKILLS = {
         'HYPER': /\b(A2PAS|AUCHAN\s*GO|FNR|HYPER|MYAUCHAN|QUALITE|SUPER|THYPER|TSUPER|UPROXY)\b/i,
         'AFR': /\b(AFR|TAUCHAN\s*FR)\b/i,
@@ -234,7 +237,6 @@
 
         const agents = texte.split(/WEB_/i);
         
-        // AJOUT DE BARCELONE DANS LES STATS
         let stats = {
             'HYPER': 0,
             'AFR': 0,
@@ -249,7 +251,6 @@
         for (let i = 1; i < agents.length; i++) {
             let blocAgent = agents[i];
 
-            // Nettoyage des groupes "C ..." (sauf C Case)
             let texteNettoye = blocAgent.replace(/C\s+(?!Case)[^\n]*/gi, '');
             texteNettoye = texteNettoye.replace(/\n/g, ' ');
 
@@ -275,7 +276,6 @@
             }
         }
 
-        // Affichage
         const statesContainer = document.getElementById('statesContainer');
         statesContainer.classList.remove('hidden');
         document.getElementById('countIdle').innerText = idle;
