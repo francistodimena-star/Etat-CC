@@ -63,12 +63,13 @@
 </div>
 
 <script>
-    // Règles strictes définies
+    // Règles strictes avec gestion des espaces et exclusions
     const REGLES_SKILLS = {
-        'HYPER': ['A2PAS', 'AUCHANGO', 'FNR', 'HYPER', 'MYAUCHAN', 'QUALITE', 'SUPER', 'THYPER', 'TSUPER', 'UPROXY'],
-        'AFR': ['AFR', 'TAUCHANFR'],
-        'DRIVE': ['DRIVE', 'TDRIVE'],
-        'SAV': ['RED SAV', 'SAV', 'SAVED', 'TSAV']
+        'HYPER': /\b(A2PAS|AUCHAN\s*GO|FNR|HYPER|MYAUCHAN|QUALITE|SUPER|THYPER|TSUPER|UPROXY)\b/i,
+        'AFR': /\b(AFR|TAUCHAN\s*FR)\b/i,
+        // Pour DRIVE, on exclut "Auchan Drive" en utilisant une regex négative
+        'DRIVE': /(?<!Auchan\s)\b(DRIVE|TDRIVE)\b/i,
+        'SAV': /\b(RED\s*SAV|SAV|SAVED|TSAV)\b/i
     };
 
     function analyserDonnees() {
@@ -78,7 +79,6 @@
             return;
         }
 
-        // On sépare le texte par ligne (1 ligne = 1 agent normalement)
         const lignes = texte.split('\n');
         
         let stats = {
@@ -94,37 +94,27 @@
         lignes.forEach(ligne => {
             if (ligne.trim() === '') return;
 
-            // --- 1. GESTION DES STATUTS ---
-            // On cherche "Idle", "Busy", "Wrap Up", "WrapUp" n'importe où dans la ligne
+            // 1. Gestion des statuts
             const estIdle = /\bIdle\b/i.test(ligne);
             const estBusy = /\bBusy\b/i.test(ligne);
             const estWrapUp = /\bWrap\s*Up\b/i.test(ligne) || /\bWrapUp\b/i.test(ligne);
 
             if (estIdle) idle++;
-            if (estBusy || estWrapUp) busy++; // Wrap Up compté avec les Busy
+            if (estBusy || estWrapUp) busy++;
 
-            // --- 2. GESTION DES SKILLS ---
-            // On vérifie si la ligne contient AU MOINS UN des mots-clés de la catégorie
-            for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
-                const aLaSkill = motsCles.some(mot => {
-                    // \b permet de s'assurer qu'on cherche le mot exact (ex: "SUPER" ne matchera pas "SUPERVISEUR")
-                    const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
-                    return regex.test(ligne);
-                });
-                
-                if (aLaSkill) stats[categorie]++;
+            // 2. Gestion des skills avec les nouvelles Regex strictes
+            for (const [categorie, regex] of Object.entries(REGLES_SKILLS)) {
+                if (regex.test(ligne)) {
+                    stats[categorie]++;
+                }
             }
 
-            // --- 3. GESTION DU MAIL ---
-            // Règle : "il faut qu'il y a C case avec eux"
-            // On cherche le motif "C Case" (avec un espace optionnel, insensible à la casse)
+            // 3. Gestion du MAIL (C Case)
             if (/\bC\s*Case\b/i.test(ligne)) {
                 stats['MAIL (C Case)']++;
             }
         });
 
-        // --- AFFICHAGE DES RÉSULTATS ---
-        
         // Affichage Idle / Busy
         document.getElementById('statesContainer').style.display = 'flex';
         document.getElementById('countIdle').innerText = idle;
