@@ -74,8 +74,7 @@
             return;
         }
 
-        // On sépare le texte par ligne
-        const lignes = texte.split('\n');
+        const agents = texte.split(/WEB_/i);
         
         let stats = {
             'HYPER': 0,
@@ -87,35 +86,46 @@
         let idle = 0;
         let busy = 0;
 
-        lignes.forEach(ligne => {
-            if (ligne.trim() === '') return;
+        for (let i = 1; i < agents.length; i++) {
+            let blocAgent = agents[i];
 
-            // 1. On vérifie si la ligne contient un statut autorisé
-            const estIdle = /\bIdle\b/i.test(ligne);
-            const estBusy = /\bBusy\b/i.test(ligne);
-            const estWrapUp = /\bWrap\s*Up\b/i.test(ligne) || /\bWrapUp\b/i.test(ligne);
+            // --- NOUVEAU FILTRE : ON IGNORE LA COLONNE "GROUPS" ---
+            // On découpe le bloc en lignes, et on ignore toutes celles qui commencent par "C " (sauf "C Case")
+            let lignesAgent = blocAgent.split('\n');
+            let texteSansGroupes = lignesAgent.filter(ligne => {
+                let ligneNettoyee = ligne.trim();
+                // Si la ligne commence par "C " mais n'est pas "C Case", on la supprime
+                if (/^C\s+/i.test(ligneNettoyee) && !/^C\s*Case/i.test(ligneNettoyee)) {
+                    return false; 
+                }
+                return true;
+            }).join(' '); // On recolle les lignes restantes
 
-            // 2. RÈGLE STRICTE : Si ce n'est ni Idle, ni Busy, ni Wrap Up, on ignore complètement la ligne
+            // 1. Vérification du statut (sur le texte nettoyé)
+            const estIdle = /\bIdle\b/i.test(texteSansGroupes);
+            const estBusy = /\bBusy\b/i.test(texteSansGroupes);
+            const estWrapUp = /\bWrap\s*Up\b/i.test(texteSansGroupes) || /\bWrapUp\b/i.test(texteSansGroupes);
+
+            // 2. RÈGLE STRICTE : Si ce n'est ni Idle, ni Busy, ni Wrap Up, on ignore
             if (!estIdle && !estBusy && !estWrapUp) {
-                return; // On passe à la ligne suivante sans rien compter
+                continue; 
             }
 
-            // 3. Si on est ici, l'agent est actif. On compte son statut.
             if (estIdle) idle++;
             if (estBusy || estWrapUp) busy++;
 
-            // 4. On compte ses compétences sur cette même ligne
+            // 3. On compte les Skills (uniquement sur le texte sans les groupes)
             for (const [categorie, regex] of Object.entries(REGLES_SKILLS)) {
-                if (regex.test(ligne)) {
+                if (regex.test(texteSansGroupes)) {
                     stats[categorie]++;
                 }
             }
 
-            // 5. On compte le MAIL (C Case)
-            if (/\bC\s*Case\b/i.test(ligne)) {
+            // 4. On compte le MAIL (C Case) (qui a été conservé dans texteSansGroupes)
+            if (/\bC\s*Case\b/i.test(texteSansGroupes)) {
                 stats['MAIL (C Case)']++;
             }
-        });
+        }
 
         // Affichage
         document.getElementById('statesContainer').style.display = 'flex';
