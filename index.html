@@ -77,6 +77,7 @@
             return;
         }
 
+        // On sépare le texte en lignes
         const lignes = texte.split('\n');
         
         let stats = {
@@ -92,25 +93,19 @@
         lignes.forEach(ligne => {
             if (ligne.trim() === '') return;
 
-            // --- GESTION STRICTE DES STATUTS (IDLE / BUSY) ---
-            // On découpe la ligne avec les tabulations pour isoler les colonnes
-            const colonnes = ligne.split('\t');
-            
-            // Sur ton tableau, la 2ème colonne (index 1) correspond à "Agent state".
-            if (colonnes.length > 1) {
-                // On nettoie le texte (enlève les espaces vides autour)
-                const agentState = colonnes[1].trim();
-                
-                // On vérifie STRICTEMENT si c'est "Idle" ou "Busy"
-                if (agentState === 'Idle') {
-                    idle++;
-                } else if (agentState === 'Busy') {
-                    busy++;
-                }
-                // Tout le reste (Déconnexion, etc.) est ignoré
-            }
+            // --- GESTION DES STATUTS (IDLE / BUSY) ---
+            // On vérifie si le mot exact "Idle" ou "Busy" est présent dans la ligne
+            // (sans tenir compte des majuscules/minuscules)
+            const estIdle = /\bIdle\b/i.test(ligne);
+            const estBusy = /\bBusy\b/i.test(ligne);
 
-            // --- COMPTAGE DES SKILLS ---
+            if (estIdle) idle++;
+            if (estBusy) busy++;
+
+            // --- COMPTAGE DES SKILLS (Uniquement si l'agent est Idle ou Busy) ---
+            // Si l'agent n'est ni Idle ni Busy (ex: Déconnexion), on passe à la ligne suivante
+            if (!estIdle && !estBusy) return; 
+
             for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
                 const aLaSkill = motsCles.some(mot => {
                     const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
