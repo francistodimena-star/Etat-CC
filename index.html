@@ -63,6 +63,7 @@
 </div>
 
 <script>
+    // Règles strictes définies
     const REGLES_SKILLS = {
         'HYPER': ['A2PAS', 'AUCHANGO', 'FNR', 'HYPER', 'MYAUCHAN', 'QUALITE', 'SUPER', 'THYPER', 'TSUPER', 'UPROXY'],
         'AFR': ['AFR', 'TAUCHANFR'],
@@ -77,7 +78,7 @@
             return;
         }
 
-        // On sépare le texte par ligne. 
+        // On sépare le texte par ligne (1 ligne = 1 agent normalement)
         const lignes = texte.split('\n');
         
         let stats = {
@@ -90,45 +91,40 @@
         let idle = 0;
         let busy = 0;
 
-        // --- NOUVELLE LOGIQUE DE REGROUPEMENT ---
-        // On va créer des "blocs" d'agents pour éviter que le copier-coller ne casse l'analyse
-        let blocActuel = "";
+        lignes.forEach(ligne => {
+            if (ligne.trim() === '') return;
 
-        for (let i = 0; i < lignes.length; i++) {
-            let ligne = lignes[i].trim();
-            if (ligne === "") continue;
-
-            // On ajoute la ligne au bloc actuel
-            blocActuel += " " + ligne;
-
-            // On vérifie si cette ligne (ou le bloc) contient un statut
+            // --- 1. GESTION DES STATUTS ---
+            // On cherche "Idle", "Busy", "Wrap Up", "WrapUp" n'importe où dans la ligne
             const estIdle = /\bIdle\b/i.test(ligne);
-            const estBusy = /\bBusy\b/i.test(ligne) || /\bWrap\s*Up\b/i.test(ligne); // Busy OR Wrap Up
+            const estBusy = /\bBusy\b/i.test(ligne);
+            const estWrapUp = /\bWrap\s*Up\b/i.test(ligne) || /\bWrapUp\b/i.test(ligne);
 
-            // Si on détecte un statut, on analyse tout le bloc accumulé pour cet agent
-            if (estIdle || estBusy) {
-                if (estIdle) idle++;
-                if (estBusy) busy++;
+            if (estIdle) idle++;
+            if (estBusy || estWrapUp) busy++; // Wrap Up compté avec les Busy
 
-                // On vérifie les skills sur TOUT le bloc (nom + skills + statut)
-                for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
-                    const aLaSkill = motsCles.some(mot => {
-                        const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
-                        return regex.test(blocActuel);
-                    });
-                    if (aLaSkill) stats[categorie]++;
-                }
-
-                // On vérifie MAIL sur tout le bloc
-                if (/C\s*Case/i.test(blocActuel)) {
-                    stats['MAIL (C Case)']++;
-                }
-
-                // On réinitialise le bloc pour passer à l'agent suivant
-                blocActuel = "";
+            // --- 2. GESTION DES SKILLS ---
+            // On vérifie si la ligne contient AU MOINS UN des mots-clés de la catégorie
+            for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
+                const aLaSkill = motsCles.some(mot => {
+                    // \b permet de s'assurer qu'on cherche le mot exact (ex: "SUPER" ne matchera pas "SUPERVISEUR")
+                    const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
+                    return regex.test(ligne);
+                });
+                
+                if (aLaSkill) stats[categorie]++;
             }
-        }
 
+            // --- 3. GESTION DU MAIL ---
+            // Règle : "il faut qu'il y a C case avec eux"
+            // On cherche le motif "C Case" (avec un espace optionnel, insensible à la casse)
+            if (/\bC\s*Case\b/i.test(ligne)) {
+                stats['MAIL (C Case)']++;
+            }
+        });
+
+        // --- AFFICHAGE DES RÉSULTATS ---
+        
         // Affichage Idle / Busy
         document.getElementById('statesContainer').style.display = 'flex';
         document.getElementById('countIdle').innerText = idle;
