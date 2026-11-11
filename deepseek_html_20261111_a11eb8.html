@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Pilotage CC - Skills</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; color: #333; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 180px; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 12px; resize: vertical; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { background: #0056b3; color: white; border: none; padding: 12px 24px; cursor: pointer; border-radius: 6px; font-size: 16px; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #004494; }
+        button.reset { background: #6c757d; }
+        button.reset:hover { background: #5a6268; }
+        
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-top: 20px; }
+        .card { background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-top: 5px solid #0056b3; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card.mail { border-top-color: #e83e8c; }
+        .card h3 { margin: 0 0 10px 0; font-size: 15px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .card .value { font-size: 36px; font-weight: bold; color: #0056b3; }
+        .card.mail .value { color: #e83e8c; }
+        
+        .states { display: flex; gap: 20px; margin-top: 20px; padding: 20px; background: #e9ecef; border-radius: 8px; }
+        .state-box { flex: 1; text-align: center; background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .state-box h4 { margin: 0 0 5px 0; color: #555; font-size: 14px; }
+        .state-box .val { font-size: 24px; font-weight: bold; }
+        .val.idle { color: #28a745; }
+        .val.busy { color: #dc3545; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📊 Mon Outil de Pilotage (Skills)</h1>
+    <p>1. Fais ton <b>Ctrl+A</b> puis <b>Ctrl+C</b> sur ton outil de supervision.<br>
+       2. Colle le résultat ci-dessous (Ctrl+V) et clique sur Analyser.</p>
+    
+    <textarea id="pasteZone" placeholder="Colle ton tableau ici (Ctrl+V)..."></textarea>
+    
+    <div class="btn-group">
+        <button onclick="analyserDonnees()">Analyser les données</button>
+        <button class="reset" onclick="resetData()">Effacer</button>
+    </div>
+
+    <!-- Section Etats -->
+    <div class="states" id="statesContainer" style="display:none;">
+        <div class="state-box">
+            <h4>Agents Idle (Prêt)</h4>
+            <div class="val idle" id="countIdle">0</div>
+        </div>
+        <div class="state-box">
+            <h4>Agents Busy (Occupé)</h4>
+            <div class="val busy" id="countBusy">0</div>
+        </div>
+    </div>
+
+    <!-- Section Skills -->
+    <div class="dashboard" id="dashboardContainer" style="display:none;">
+        <!-- Généré par JS -->
+    </div>
+</div>
+
+<script>
+    // Définition des règles métier basées sur tes spécifications
+    const REGLES_SKILLS = {
+        'HYPER': ['A2PAS', 'AUCHANGO', 'FNR', 'HYPER', 'MYAUCHAN', 'QUALITE', 'SUPER', 'THYPER', 'TSUPER', 'UPROXY'],
+        'AFR': ['AFR', 'TAUCHANFR'],
+        'DRIVE': ['DRIVE', 'TDRIVE'],
+        'SAV': ['RED SAV', 'SAV', 'SAVED', 'TSAV']
+        // MAIL sera traité à part
+    };
+
+    function analyserDonnees() {
+        const texte = document.getElementById('pasteZone').value;
+        if (!texte.trim()) {
+            alert("Veuillez coller des données d'abord.");
+            return;
+        }
+
+        // On sépare le texte en lignes (chaque ligne = 1 agent)
+        const lignes = texte.split('\n');
+        
+        // Initialisation des compteurs
+        let stats = {
+            'HYPER': 0,
+            'AFR': 0,
+            'DRIVE': 0,
+            'SAV': 0,
+            'MAIL (C Case)': 0
+        };
+        let idle = 0;
+        let busy = 0;
+
+        lignes.forEach(ligne => {
+            if (ligne.trim() === '') return; // Ignorer les lignes vides
+
+            // 1. Comptage des états (Idle / Busy)
+            if (ligne.includes('Idle')) idle++;
+            if (ligne.includes('Busy')) busy++;
+
+            // 2. Comptage des Skills classiques
+            // On parcourt chaque catégorie (HYPER, AFR, etc.)
+            for (const [categorie, motsCles] of Object.entries(REGLES_SKILLS)) {
+                // On vérifie si la ligne contient AU MOINS UN des mots-clés de la catégorie
+                const aLaSkill = motsCles.some(mot => {
+                    // Regex: \b pour délimiter le mot (évite de compter "SUPER" dans "SUPERVISEUR")
+                    const regex = new RegExp(`\\b${mot}\\b`, 'i'); 
+                    return regex.test(ligne);
+                });
+                
+                if (aLaSkill) stats[categorie]++;
+            }
+
+            // 3. Comptage spécial pour MAIL ("C Case")
+            // On cherche la phrase exacte "C Case" sans tenir compte de la casse
+            if (/C\s*Case/i.test(ligne)) {
+                stats['MAIL (C Case)']++;
+            }
+        });
+
+        // --- AFFICHAGE DES RÉSULTATS ---
+        
+        // Affichage Idle / Busy
+        document.getElementById('statesContainer').style.display = 'flex';
+        document.getElementById('countIdle').innerText = idle;
+        document.getElementById('countBusy').innerText = busy;
+
+        // Affichage des Skills
+        const dashboard = document.getElementById('dashboardContainer');
+        dashboard.innerHTML = ''; // Nettoyer
+        dashboard.style.display = 'grid';
+
+        for (const [titre, count] of Object.entries(stats)) {
+            const card = document.createElement('div');
+            // On ajoute une classe spéciale pour la carte Mail pour la différencier
+            card.className = titre.includes('MAIL') ? 'card mail' : 'card';
+            
+            card.innerHTML = `
+                <h3>${titre}</h3>
+                <div class="value">${count}</div>
+            `;
+            dashboard.appendChild(card);
+        }
+    }
+
+    function resetData() {
+        document.getElementById('pasteZone').value = '';
+        document.getElementById('statesContainer').style.display = 'none';
+        document.getElementById('dashboardContainer').style.display = 'none';
+        document.getElementById('dashboardContainer').innerHTML = '';
+    }
+</script>
+
+</body>
+</html>
