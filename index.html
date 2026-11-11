@@ -216,11 +216,13 @@
 </div>
 
 <script>
+    // AJOUT DE BARCELONE ICI
     const REGLES_SKILLS = {
         'HYPER': /\b(A2PAS|AUCHAN\s*GO|FNR|HYPER|MYAUCHAN|QUALITE|SUPER|THYPER|TSUPER|UPROXY)\b/i,
         'AFR': /\b(AFR|TAUCHAN\s*FR)\b/i,
         'DRIVE': /(?<!Auchan\s)\b(DRIVE|TDRIVE)\b/i,
-        'SAV': /\b(RED\s*SAV|SAV|SAVED|TSAV)\b/i
+        'SAV': /\b(RED\s*SAV|SAV|SAVED|TSAV)\b/i,
+        'BARCELONE': /\b(BARCELONE)\b/i 
     };
 
     function analyserDonnees() {
@@ -232,11 +234,13 @@
 
         const agents = texte.split(/WEB_/i);
         
+        // AJOUT DE BARCELONE DANS LES STATS
         let stats = {
             'HYPER': 0,
             'AFR': 0,
             'DRIVE': 0,
             'SAV': 0,
+            'BARCELONE': 0,
             'MAIL (C Case)': 0
         };
         let idle = 0;
