@@ -90,12 +90,12 @@
         };
         let idle = 0;
         let busy = 0;
-        let other = 0; // Nouveau compteur
+        let other = 0;
 
         for (let i = 1; i < agents.length; i++) {
             let blocAgent = agents[i];
 
-            // Vérification des statuts
+            // 1. Vérification du statut
             const estIdle = /\bIdle\b/i.test(blocAgent);
             const estBusy = /\bBusy\b/i.test(blocAgent);
             const estWrapUp = /\bWrap\s*Up\b/i.test(blocAgent) || /\bWrapUp\b/i.test(blocAgent);
@@ -105,11 +105,13 @@
             } else if (estBusy || estWrapUp) {
                 busy++;
             } else {
-                // Si ce n'est ni Idle, ni Busy, ni WrapUp, c'est un "Autre statut"
+                // Si c'est un autre statut (Connexion, Panier, Pause...)
                 other++;
+                // ON IGNORE SES SKILLS ET ON PASSE DIRECTEMENT À L'AGENT SUIVANT
+                continue; 
             }
 
-            // Vérification des Skills (pour tout le monde)
+            // 2. Si on arrive ici, c'est que l'agent est Idle ou Busy. On compte ses Skills.
             for (const [categorie, regex] of Object.entries(REGLES_SKILLS)) {
                 if (regex.test(blocAgent)) {
                     stats[categorie]++;
